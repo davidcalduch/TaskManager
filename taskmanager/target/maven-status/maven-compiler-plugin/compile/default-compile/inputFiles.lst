@@ -1,0 +1,10 @@
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/Controller/TaskController.java
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/Controller/UserController.java
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/Model/LoginRequest.java
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/Model/Task1.java
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/Model/User.java
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/TaskmanagerApplication.java
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/exception/TaskNotFoundException.java
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/repository/TaskRepository.java
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/repository/UserRepository.java
+/Users/davidcalduch/Downloads/Proyectos/VsCode/taskmanager/src/main/java/com/example/taskmanager/taskmanager/service/SecurityConfig.java
