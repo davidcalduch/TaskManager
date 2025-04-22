@@ -7,6 +7,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 
 
 @Entity
@@ -21,14 +23,20 @@ public class Task1 {
     private String priority; 
     private boolean completed;
     
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
     public Task1() {
     }
-    public Task1(String title, String description, LocalDate dueDate, String priority, boolean completed) {
+    public Task1(String title, String description, LocalDate dueDate, String priority, boolean completed, User user) {
         this.title = title;
         this.description = description;
         this.dueDate = dueDate;
         this.priority = priority;
         this.completed = completed;
+        this.user = user;
+        
     }
 
     public Task1(LocalDate dueDate) { 
@@ -36,6 +44,12 @@ public class Task1 {
     }
 
     // Getters y setters
+    public User getUser() {
+        return user;
+    }
+    public void setUser(User user) {
+        this.user = user;
+    }
     public Long getId() {
         return id;
     }

@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.taskmanager.taskmanager.Model.Task1;
+import com.example.taskmanager.taskmanager.Model.User;
 import com.example.taskmanager.taskmanager.exception.TaskNotFoundException;
 import com.example.taskmanager.taskmanager.repository.TaskRepository;
+import com.example.taskmanager.taskmanager.repository.UserRepository;
 
 @CrossOrigin(origins= "*")
 @RestController
@@ -23,6 +25,8 @@ import com.example.taskmanager.taskmanager.repository.TaskRepository;
 public class TaskController {
     @Autowired
     private TaskRepository taskRepository;
+     @Autowired
+    private UserRepository userRepository;
 
     @GetMapping
     public List<Task1> getTasks() {
@@ -30,14 +34,18 @@ public class TaskController {
     }
     @PostMapping
     public Task1 createTask(@RequestBody Task1 task) {
+        if (task.getUser() == null || task.getUser().getId() == null) {
+            throw new IllegalArgumentException("User ID must be provided in the task payload.");
+        }
+
+        User user = userRepository.findById(task.getUser().getId())
+            .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + task.getUser().getId()));
+
+        task.setUser(user);
+
         System.out.println("📩 Recibiendo tarea con dueDate: " + task.getDueDate());
-        System.out.println(task);
-        
         Task1 savedTask = taskRepository.save(task); 
-        
         System.out.println("📝 Tarea guardada: ID: " + savedTask.getId());
-        System.out.println(savedTask); 
-        
         return savedTask; 
     }
  

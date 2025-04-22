@@ -43,6 +43,7 @@ public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
     } else {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
     }
-}  }
+    }  
+}
     
 
