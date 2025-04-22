@@ -9,6 +9,7 @@ struct AddTaskView: View {
     @State private var alertMessage = ""
     @State private var showingAlert = false
     @State private var showingAddEventView = false
+    @EnvironmentObject var userSession: UserSession
 
     let priorities = ["Low", "Medium", "High"]
     let taskServiceInstance = TaskService()
@@ -40,13 +41,20 @@ struct AddTaskView: View {
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         let dueDateString = formatter.string(from: dueDate)
 
+        guard let userId = userSession.userId else {
+            alertMessage = "User not logged in."
+            showingAlert = true
+            return
+        }
+
         let newTask = Task1(
             id: nil,
             title: title,
             description: description,
             dueDate: dueDateString,
             priority: priority,
-            completed: completed
+            completed: completed,
+            user: UserReference(id: userId)
         )
 
         taskServiceInstance.createTask(task: newTask) { success in

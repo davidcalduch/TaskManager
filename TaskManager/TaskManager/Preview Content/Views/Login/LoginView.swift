@@ -125,6 +125,7 @@ struct LoginView: View {
                         userSession.name = userResponse.name
                         userSession.email = userResponse.email
                         userSession.password = userResponse.password
+                        userSession.userId = userResponse.id
                         userSession.isLoggedIn = true
                         isLogin = true
                     }
@@ -143,6 +144,7 @@ struct LoginView: View {
     }
 }
 struct UserResponse: Codable {
+    let id: Int
     let name: String
     let email: String
     let password: String

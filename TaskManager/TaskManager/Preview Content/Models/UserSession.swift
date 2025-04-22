@@ -11,4 +11,5 @@ class UserSession: ObservableObject {
     @Published var email: String = ""
     @Published var password: String = ""
     @Published var isLoggedIn: Bool = false
+    @Published var userId: Int? = nil 
 }

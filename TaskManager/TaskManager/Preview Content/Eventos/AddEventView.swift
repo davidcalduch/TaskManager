@@ -8,127 +8,102 @@
 import SwiftUI
 
 struct AddEventView: View {
-    @State private var eventName: String = ""
-    @State private var eventDescription: String = ""
-    @State private var eventDate: Date = Date()
-    @State private var showingDatePicker = false
-    @State private var alertMessage = ""
+    @EnvironmentObject var userSession: UserSession // para obtener userId
+
+    @State private var name: String = ""
+    @State private var description: String = ""
+    @State private var date = Date()
+    @State private var time = Date()
+    @State private var color: Int = 1
+    
     @State private var showingAlert = false
-    @State private var selectedColor: Color = .blue
-    
-    let priorityColors: [(color: Color, name: String)] = [(.green, "Low"), (.yellow, "Medium"), (.red, "High")]
-    
-    func validateInputs() -> Bool {
-        if eventName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            alertMessage = "Event name cannot be empty."
-            return false
+    @State private var alertMessage = ""
+
+    let eventService = EventService()
+
+    let colors = [1: "Red", 2: "Yellow", 3: "Green"]
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Event Info")) {
+                    TextField("Event name", text: $name)
+                    TextEditor(text: $description)
+                        .frame(height: 100)
+                }
+
+                Section(header: Text("Date & Time")) {
+                    DatePicker("Date", selection: $date, displayedComponents: .date)
+                    DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                }
+
+                Section(header: Text("Color")) {
+                    Picker("Color", selection: $color) {
+                        ForEach(colors.keys.sorted(), id: \.self) { key in
+                            Text(colors[key]!).tag(key)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                }
+
+                Button("Add Event") {
+                    addEvent()
+                }
+                .foregroundColor(.white)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.blue)
+                .cornerRadius(10)
+            }
+            .navigationTitle("Add Event")
+            .alert(isPresented: $showingAlert) {
+                Alert(title: Text("Event Status"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+            }
         }
-        return true
     }
-    
-    func addEvent() {
-        guard validateInputs() else {
+
+    private func addEvent() {
+        guard let userId = userSession.userId else {
+            alertMessage = "User not logged in"
             showingAlert = true
             return
         }
-        
+
+        // Formato de fecha y hora
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
-        let eventDateTime = dateFormatter.string(from: eventDate)
-        
-        print("📅 Event: \(eventName), \(eventDateTime), Color: \(selectedColor)")
-        
-        alertMessage = "Event successfully added!"
-        showingAlert = true
-        
-        // Clear form
-        eventName = ""
-        eventDescription = ""
-        eventDate = Date()
-        selectedColor = .blue
-    }
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 16) {
-                TextField("Enter event name", text: $eventName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding(.horizontal)
-                
-                TextEditor(text: $eventDescription)
-                    .frame(height: 80)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
-                    .padding(.horizontal)
-                
-                Button(action: { showingDatePicker.toggle() }) {
-                    HStack {
-                        Text("Select Date & Time")
-                        Spacer()
-                        Text("\(eventDate, formatter: DateFormatter.shortDateTime)")
-                            .foregroundColor(.gray)
-                    }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(UIColor.systemGray6)))
-                    .padding(.horizontal)
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let formattedDate = dateFormatter.string(from: date)
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let formattedTime = timeFormatter.string(from: time)
+
+        // Crear evento
+        let newEvent = Evento(
+            id: nil,
+            user: UserReference(id: userId),
+            name: name,
+            date: formattedDate,
+            time: formattedTime,
+            description: description,
+            color: color
+        )
+
+        // Llamar al backend
+        eventService.createEvent(event: newEvent) { success in
+            DispatchQueue.main.async {
+                if success {
+                    alertMessage = "Event created successfully!"
+                    name = ""
+                    description = ""
+                    date = Date()
+                    time = Date()
+                    color = 1
+                } else {
+                    alertMessage = "Failed to create event"
                 }
-                
-                if showingDatePicker {
-                    DatePicker("Select Date & Time", selection: $eventDate, in: Date()..., displayedComponents: [.date, .hourAndMinute])
-                        .datePickerStyle(CompactDatePickerStyle())
-                        .padding(.horizontal)
-                }
-                
-                Text("Priority Level")
-                    .font(.headline)
-                    .padding(.top)
-                
-                HStack {
-                    ForEach(priorityColors, id: \ .name) { color in
-                        Circle()
-                            .fill(color.color)
-                            .frame(width: 30, height: 30)
-                            .overlay(
-                                Circle()
-                                    .stroke(selectedColor == color.color ? Color.black : Color.clear, lineWidth: 2)
-                            )
-                            .onTapGesture {
-                                selectedColor = color.color
-                            }
-                    }
-                }
-                .padding(.bottom)
-                
-                Button(action: addEvent) {
-                    Text("Save Event")
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                        .padding(.horizontal)
-                }
-                .alert(isPresented: $showingAlert) {
-                    Alert(title: Text("Event Status"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
-                }
-                
-                Spacer()
+                showingAlert = true
             }
-            .padding(.top, 20)
-            .navigationTitle("New Event")
         }
-    }
-}
-
-extension DateFormatter {
-    static let shortDateTime: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter
-    }()
-}
-
-struct AddEventView_Previews: PreviewProvider {
-    static var previews: some View {
-        AddEventView()
     }
 }

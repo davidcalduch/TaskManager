@@ -8,7 +8,12 @@ struct Task1: Codable {
     var dueDate: String  // Se mantiene como Double para enviar timestamp
     var priority: String?
     var completed: Bool
+    var user: UserReference
 }
+struct UserReference: Codable {
+    var id: Int
+}
+
 
 // Clase para manejar las peticiones al backend
 import Foundation
@@ -52,7 +57,7 @@ class TaskService {
             
             if let httpResponse = response as? HTTPURLResponse {
                 print("Código de estado HTTP: \(httpResponse.statusCode)")
-                if httpResponse.statusCode != 201 {
+                if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
                     print("Error: código de estado \(httpResponse.statusCode)")
                     completion(false)
                     return
@@ -66,6 +71,7 @@ class TaskService {
             completion(true)
         }.resume()
     }
+    
     func fetchTasks(completion: @escaping ([Task1]) -> Void ){
         
         guard let url = URL(string: baseUrl)else {
@@ -107,6 +113,7 @@ class TaskService {
     
     
 }
+
 
 
 

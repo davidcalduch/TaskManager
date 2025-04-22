@@ -11,6 +11,9 @@ struct CalendarTaskView: View {
     @State private var selectedDate = Date()
     @State private var tasks: [Task] = []
     @State private var newTaskTitle: String = ""
+    @EnvironmentObject var userSession: UserSession
+    @State private var alertMessage: String = ""
+    @State private var showingAlert: Bool = false
     private let taskService = TaskService()
 
     private var tasksForSelectedDate: [Task] {
@@ -112,10 +115,16 @@ struct CalendarTaskView: View {
 
     private func addTask() {
         guard !newTaskTitle.isEmpty else { return }
+        guard let userId = userSession.userId else {
+                alertMessage = "User not logged in."
+                showingAlert = true
+                return
+            }
 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dueDateString = formatter.string(from: selectedDate) // ✅ Enviar solo la fecha
+        
 
         let newTask = Task1(
             id: nil, // El backend asignará el ID
@@ -123,7 +132,8 @@ struct CalendarTaskView: View {
             description: "",
             dueDate: dueDateString,
             priority: "Medium",
-            completed: false
+            completed: false,
+            user: UserReference(id: userId)
         )
 
         taskService.createTask(task: newTask) { success in
