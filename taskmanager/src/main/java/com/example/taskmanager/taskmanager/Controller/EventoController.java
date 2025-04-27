@@ -1,8 +1,11 @@
 package com.example.taskmanager.taskmanager.Controller;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,8 +35,9 @@ public class EventoController {
    private EventoRepository eventoRepository;
 
    @GetMapping
-    public List<Evento> getEventos() {
-         return eventoRepository.findAll();
+    public Map<String, List<Evento>> getEventos() {
+        List<Evento> eventos = eventoRepository.findAll();
+        return Collections.singletonMap("data", eventos);
     }
     @PostMapping
     public Evento createEvento(@RequestBody Evento evento) {
@@ -57,5 +61,30 @@ public class EventoController {
         System.out.println("📝 Tarea guardada: ID: " + savedEvento.getId());
         return savedEvento; 
     }
+    @GetMapping("/user_id/{id}")
+    public List<Evento> getEventosPorUsuario(@PathVariable("id") Long usuarioId) {
+        // Verifica si el usuario existe
+        if (!userRepository.existsById(usuarioId)) {
+            throw new IllegalArgumentException("User not found with ID: " + usuarioId);
+        }
+
+        // Si el usuario existe, obtener sus eventos
+        return eventoRepository.findByUsuarioId(usuarioId);
+    }
+    @PutMapping("/{id}")
+    public ResponseEntity<Evento> updateEvento(@PathVariable Long id, @RequestBody Evento evento) {
+        Evento existingEvento = eventoRepository.findById(id).orElseThrow(() -> new RuntimeException("Evento no encontrado"));
+        existingEvento.setNombre(evento.getNombre());
+        existingEvento.setDescripcion(evento.getDescripcion());
+        existingEvento.setFecha(evento.getFecha());
+        existingEvento.setHora(evento.getHora());
+        existingEvento.setColor(evento.getColor());
+        
+        // Guardamos el evento actualizado
+        Evento updatedEvento = eventoRepository.save(existingEvento);
+        
+        return ResponseEntity.ok(updatedEvento);
+    }
+    
 
 }

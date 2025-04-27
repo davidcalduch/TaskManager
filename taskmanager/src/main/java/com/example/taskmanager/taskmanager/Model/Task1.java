@@ -1,6 +1,7 @@
 package com.example.taskmanager.taskmanager.Model;
 
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,7 +20,7 @@ public class Task1 {
     private String title;    
     private String description; 
     @Column(name = "due_date")
-    private LocalDate dueDate;
+    private ZonedDateTime dueDate;
     private String priority; 
     private boolean completed;
     
@@ -29,7 +30,7 @@ public class Task1 {
     
     public Task1() {
     }
-    public Task1(String title, String description, LocalDate dueDate, String priority, boolean completed, User user) {
+    public Task1(String title, String description, ZonedDateTime dueDate, String priority, boolean completed, User user) {
         this.title = title;
         this.description = description;
         this.dueDate = dueDate;
@@ -39,7 +40,7 @@ public class Task1 {
         
     }
 
-    public Task1(LocalDate dueDate) { 
+    public Task1(ZonedDateTime dueDate) { 
         this.dueDate = dueDate;
     }
 
@@ -89,6 +90,6 @@ public class Task1 {
     public void setCompleted(boolean completed) {
         this.completed = completed;
     }
-    public LocalDate getDueDate() { return dueDate; }
-    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; } //
+    public ZonedDateTime getDueDate() { return dueDate; }
+    public void setDueDate(ZonedDateTime dueDate) { this.dueDate = dueDate; } //
 }

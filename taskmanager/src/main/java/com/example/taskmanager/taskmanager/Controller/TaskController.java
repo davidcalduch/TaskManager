@@ -2,6 +2,7 @@ package com.example.taskmanager.taskmanager.Controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,9 +29,9 @@ public class TaskController {
      @Autowired
     private UserRepository userRepository;
 
-    @GetMapping
-    public List<Task1> getTasks() {
-        return taskRepository.findAll();
+    @GetMapping("/user/{userId}")
+    public List<Task1> getTasksByUser(@PathVariable Long userId) {
+    return taskRepository.findByUserId(userId);  // Asegúrate de que tienes este método en tu repositorio
     }
     @PostMapping
     public Task1 createTask(@RequestBody Task1 task) {
@@ -49,21 +50,32 @@ public class TaskController {
         return savedTask; 
     }
  
-    @PutMapping("/{id}")
-    public Task1 updateTask(@PathVariable Long id, @RequestBody Task1 task) 
-    {
+   @PutMapping("/{id}")
+public ResponseEntity<Task1> updateTask(@PathVariable Long id, @RequestBody Task1 task) {
+    // Comprobamos si la tarea existe
     Task1 taskToUpdate = taskRepository.findById(id)
         .orElseThrow(() -> new TaskNotFoundException(id));
-    taskToUpdate.setTitle(task.getTitle());
-    taskToUpdate.setDescription(task.getDescription());
-    /*taskToUpdate.setDueDate(task.getDueDate());*/
-    taskToUpdate.setPriority(task.getPriority());
-    taskToUpdate.setCompleted(task.isCompleted());
-    return taskRepository.save(taskToUpdate);
+    
+    // Si el task tiene un usuario válido
+    if (task.getUser() != null && task.getUser().getId() != null) {
+        User user = userRepository.findById(task.getUser().getId())
+            .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + task.getUser().getId()));
+        taskToUpdate.setUser(user); // Asignar el usuario correcto a la tarea
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteTask(@PathVariable Long id) {
-        taskRepository.deleteById(id);
-    }
+    // Actualizamos la tarea con los nuevos valores
+    taskToUpdate.setTitle(task.getTitle());
+    taskToUpdate.setDescription(task.getDescription());
+    taskToUpdate.setPriority(task.getPriority());
+    taskToUpdate.setCompleted(task.isCompleted());
+    
+    // Si tienes un campo 'dueDate' en el futuro, descomenta esta línea y actualízala:
+    // taskToUpdate.setDueDate(task.getDueDate());
+    
+    // Guardamos la tarea actualizada
+    Task1 updatedTask = taskRepository.save(taskToUpdate);
+    
+    // Retornamos el resultado en un ResponseEntity
+    return ResponseEntity.ok(updatedTask);
+}
 }
