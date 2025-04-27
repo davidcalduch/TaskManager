@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AuthenticationServices
 
 struct LoginView: View {
     @State private var email: String = ""
@@ -57,6 +58,40 @@ struct LoginView: View {
                         .cornerRadius(10)
                 }
                 .padding(.bottom, 20)
+                
+                // Apple SignIn Button
+                SignInWithAppleButton(.signIn, onRequest: { request in
+                    // Configurar lo que pedimos a Apple
+                    let nonce = randomNonceString()
+                    request.nonce = nonce
+                    request.requestedScopes = [.fullName, .email]
+                }, onCompletion: { result in
+                    switch result {
+                    case .success(let authResults):
+                        // Manejo del resultado exitoso
+                        guard let credential = authResults.credential as? ASAuthorizationAppleIDCredential else { return }
+                        
+                        // Obtener el token de Apple para verificar
+                        let userToken = credential.identityToken
+                        let userIdentifier = credential.user
+                        
+                        // Guardar esta información en el session
+                        // Aquí puedes hacer una petición HTTP para validar el login con Apple
+                        
+                        // Para efectos de este ejemplo, solo estamos estableciendo en el UserSession
+                        userSession.userId = userIdentifier.hashValue // Identificador único de Apple
+                        userSession.isLoggedIn = true
+                        isLogin = true
+                        
+                    case .failure(let error):
+                        // Si hay un error, lo imprimimos
+                        print("Error: \(error.localizedDescription)")
+                    }
+                })
+                .signInWithAppleButtonStyle(.black)
+                .frame(height: 44)
+                .padding(.bottom, 20)
+                
                 NavigationLink(destination: MainTabView().navigationBarBackButtonHidden(true), isActive: $isLogin) {
                     EmptyView()
                 }
@@ -154,4 +189,23 @@ struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
         LoginView()
     }
+}
+
+// Método auxiliar para generación de nonce seguro para Sign In with Apple
+func randomNonceString(length: Int = 32) -> String {
+    precondition(length > 0)
+    let charset: Array<Character> = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._")
+    var result = ""
+    var remainingLength = length
+    while remainingLength > 0 {
+        let randoms: [UInt8] = (0..<16).map { _ in UInt8.random(in: 0..<255) }
+        randoms.forEach {
+            if remainingLength == 0 { return }
+            if $0 < charset.count {
+                result.append(charset[Int($0)])
+                remainingLength -= 1
+            }
+        }
+    }
+    return result
 }

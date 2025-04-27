@@ -36,9 +36,10 @@ struct AddTaskView: View {
             return
         }
 
+        // Crear el DateFormatter para convertir la fecha
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ" // Formato para incluir la zona horaria
+        formatter.timeZone = TimeZone.current // Usar la zona horaria del dispositivo
         let dueDateString = formatter.string(from: dueDate)
 
         guard let userId = userSession.userId else {
@@ -47,23 +48,25 @@ struct AddTaskView: View {
             return
         }
 
+        // Crear la tarea con el nuevo formato de fecha
         let newTask = Task1(
             id: nil,
             title: title,
             description: description,
-            dueDate: dueDateString,
+            dueDate: dueDateString, // Enviar la fecha con zona horaria
             priority: priority,
             completed: completed,
             user: UserReference(id: userId)
         )
 
+        // Llamar al servicio para crear la tarea
         taskServiceInstance.createTask(task: newTask) { success in
             DispatchQueue.main.async {
                 if success {
                     alertMessage = "Task successfully added!"
                     title = ""
                     description = ""
-                    dueDate = Date()
+                    dueDate = Date() // Resetear el campo de fecha
                     priority = "Medium"
                     completed = false
                 } else {

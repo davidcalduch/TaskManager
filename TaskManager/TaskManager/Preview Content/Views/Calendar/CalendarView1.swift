@@ -1,25 +1,111 @@
 import SwiftUI
 
-struct Event: Identifiable {
-    let id = UUID()
-    let title: String
-    let date: Date
-    let hour: String
+struct Event: Identifiable, Codable {
+    let id: Int
+    var name: String
+    var date: String
+    var time: String
+    var description: String
+    var color: Int
+    let usuario: UserReference
+
+    struct UserReference: Codable {
+        let id: Int
+    }
+
+    var dateValue: Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: date)
+    }
+}
+
+
+class EventService1: ObservableObject {
+    let baseUrl = "http://localhost:8080/eventos/user_id"
+    // El userId se obtiene dinámicamente desde UserSession
+
+    @EnvironmentObject var userSession: UserSession // Solo funciona en View, así que pasaremos userId como parámetro
+
+    func fetchEvents(for userId: Int, completion: @escaping ([Event]) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/\(userId)") else {
+            print("URL inválida")
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, _, error in
+            if let data = data {
+                do {
+                    let decoded = try JSONDecoder().decode([Event].self, from: data)
+                    DispatchQueue.main.async {
+                        completion(decoded)
+                    }
+                } catch {
+                    print("Error al decodificar eventos: \(error)")
+                }
+            } else if let error = error {
+                print("Error al obtener eventos: \(error)")
+            }
+        }.resume()
+    }
+    
+    func updateEvent(_ event: Event, completion: @escaping (Bool) -> Void) {
+        guard let url = URL(string: "http://localhost:8080/eventos/\(event.id)") else {
+            print("URL inválida para actualización")
+            completion(false)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            let jsonData = try JSONEncoder().encode(event)
+            request.httpBody = jsonData
+        } catch {
+            print("Error codificando evento: \(error)")
+            completion(false)
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error en la actualización: \(error)")
+                completion(false)
+                return
+            }
+
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                DispatchQueue.main.async {
+                    completion(true)
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
 }
 
 struct WeeklyCalendarView: View {
     @Environment(\.presentationMode) var presentationMode
+    @EnvironmentObject var userSession: UserSession
 
     @State private var selectedDate = Date()
     @State private var currentWeek: [Date] = []
-    @State private var events: [Event] = [
-        Event(title: "Reunión de equipo", date: Calendar.current.date(byAdding: .day, value: 1, to: Date())!, hour: "10:00 AM"),
-        Event(title: "Entrega de proyecto", date: Calendar.current.date(byAdding: .day, value: 2, to: Date())!, hour: "3:00 PM"),
-        Event(title: "Cena con amigos", date: Calendar.current.date(byAdding: .day, value: 3, to: Date())!, hour: "8:00 PM")
-    ]
-    
+    @State private var allEvents: [Event] = []
+    @State private var selectedEvent: Event? = nil
+    let eventService1 = EventService1()
+
     var eventsForSelectedDate: [Event] {
-        events.filter { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
+        allEvents.filter {
+            if let eventDate = $0.dateValue {
+                return Calendar.current.isDate(eventDate, inSameDayAs: selectedDate)
+            }
+            return false
+        }
     }
     
     var body: some View {
@@ -67,11 +153,20 @@ struct WeeklyCalendarView: View {
                 } else {
                     ForEach(eventsForSelectedDate) { event in
                         HStack {
-                            Text(event.hour)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                            Text(event.title)
-                                .font(.headline)
+                            Circle()
+                                .fill(colorForPriority(event.color))
+                                .frame(width: 10, height: 10)
+
+                            VStack(alignment: .leading) {
+                                Text(event.time)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text(event.name)
+                                    .font(.headline)
+                            }
+                        }
+                        .onTapGesture {
+                            selectedEvent = event
                         }
                     }
                 }
@@ -79,7 +174,14 @@ struct WeeklyCalendarView: View {
         }
         .onAppear {
             generateCurrentWeek()
-            print("Current week: \(currentWeek)")
+            // Solo buscar eventos si hay userId disponible
+            if let userId = userSession.userId {
+                eventService1.fetchEvents(for: userId) { fetched in
+                    self.allEvents = fetched
+                }
+            } else {
+                print("Usuario no encontrado")
+            }
         }
         .navigationBarBackButtonHidden(true) // Ocultar el botón de regreso por defecto
         .toolbar {
@@ -93,6 +195,16 @@ struct WeeklyCalendarView: View {
                 }
             }
         }
+        .sheet(item: $selectedEvent) { event in
+            EventDetailView(event: binding(for: event))
+        }
+    }
+    
+    private func binding(for event: Event) -> Binding<Event> {
+        guard let index = allEvents.firstIndex(where: { $0.id == event.id }) else {
+            fatalError("Evento no encontrado")
+        }
+        return $allEvents[index]
     }
     
     private func generateCurrentWeek() {
@@ -140,11 +252,57 @@ struct WeeklyCalendarView: View {
         formatter.dateFormat = "d"
         return formatter
     }
+
+    private func colorForPriority(_ color: Int) -> Color {
+        switch color {
+        case 1: return .red
+        case 2: return .yellow
+        case 3: return .green
+        default: return .gray
+        }
+    }
 }
 
 struct WeeklyCalendarView_Previews: PreviewProvider {
     static var previews: some View {
-        WeeklyCalendarView()
+        WeeklyCalendarView().environmentObject(UserSession())
     }
 }
 
+struct EventDetailView: View {
+    @Environment(\.presentationMode) var presentationMode
+
+    @Binding var event: Event
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Detalles del Evento")) {
+                    TextField("Nombre", text: $event.name)
+                    TextField("Descripción", text: $event.description)
+                    TextField("Hora", text: $event.time)
+                }
+
+                Section(header: Text("Color")) {
+                    Picker("Prioridad", selection: $event.color) {
+                        Text("Rojo").tag(1)
+                        Text("Amarillo").tag(2)
+                        Text("Verde").tag(3)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                }
+            }
+            .navigationBarTitle("Editar Evento", displayMode: .inline)
+            .navigationBarItems(trailing: Button("Guardar") {
+                let service = EventService1()
+                service.updateEvent(event) { success in
+                    if success {
+                        presentationMode.wrappedValue.dismiss()
+                    } else {
+                        print("❌ Error al actualizar el evento.")
+                    }
+                }
+            })
+        }
+    }
+}

@@ -1,10 +1,11 @@
 import SwiftUI
 
-struct Task: Identifiable {
-    let id = UUID()
+struct Task: Identifiable, Decodable {
+    let id: Int   // Cambiado de UUID a Int
     let title: String
-    let date: Date
+    let dueDate: String  // Asegúrate de que la propiedad coincida con el JSON
     var completed: Bool
+    let user: UserReference  // Suponiendo que tienes una estructura para el usuario
 }
 
 struct CalendarTaskView: View {
@@ -18,7 +19,7 @@ struct CalendarTaskView: View {
 
     private var tasksForSelectedDate: [Task] {
         tasks.filter { task in
-            Calendar.current.isDate(task.date, inSameDayAs: selectedDate)
+            Calendar.current.isDate(convertStringToDate(task.dueDate), inSameDayAs: selectedDate)
         }
     }
 
@@ -100,17 +101,46 @@ struct CalendarTaskView: View {
         }
     }
 
-    private func fetchTasks() {
-        taskService.fetchTasks { fetchedTasks in
-            self.tasks = fetchedTasks.map { task1 in
-                Task(
-                    title: task1.title,
-                    date: convertStringToDate(task1.dueDate), // ✅ Convierte la fecha correctamente
-                    completed: task1.completed
-                )
+    func fetchTasks() {
+        guard let userId = userSession.userId else { return }
+
+        guard let url = URL(string: "http://localhost:8080/tasks/user/\(userId)") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"  // Verifica que el método es GET
+
+        // Agregar autenticación básica si es necesario
+        let username = "david"  // Cambia a tu usuario
+        let password = "Pitita_44"  // Cambia a tu contraseña
+        let loginString = "\(username):\(password)"
+        guard let loginData = loginString.data(using: .utf8) else { return }
+        let base64LoginString = loginData.base64EncodedString()
+        request.setValue("Basic \(base64LoginString)", forHTTPHeaderField: "Authorization")
+
+        let decoder = JSONDecoder()
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Error en la petición: \(error)")
+                return
             }
-            print("✅ Tareas recibidas: \(self.tasks)")
-        }
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ Respuesta no válida del servidor")
+                return
+            }
+            if httpResponse.statusCode == 200 {
+                do {
+                    let decoded = try decoder.decode([Task].self, from: data!)
+                    DispatchQueue.main.async {
+                        self.tasks = decoded
+                    }
+                } catch {
+                    print("❌ Error al decodificar: \(error)")
+                }
+            } else {
+                print("❌ Error en la respuesta HTTP: \(httpResponse.statusCode)")
+            }
+        }.resume()
     }
 
     private func addTask() {
@@ -164,8 +194,13 @@ struct CalendarTaskView_Previews: PreviewProvider {
 }
 
 private func convertStringToDate(_ dateString: String) -> Date {
+    let isoFormatter = ISO8601DateFormatter()
+    if let date = isoFormatter.date(from: dateString) {
+        return date
+    }
+    
+    // Si el formato no es ISO8601, intenta con un formato más estándar
     let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd" // 📆 Asegúrate de que coincide con el formato del backend
+    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ" // Ajusta esto al formato correcto de la fecha que recibes
     return formatter.date(from: dateString) ?? Date() // Devuelve la fecha actual si falla
 }
-
